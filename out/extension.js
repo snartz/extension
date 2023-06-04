@@ -61,45 +61,53 @@ function activate(context) {
                 return;
             }
             let newText = '';
-            const chatGPTClient = new ChatGPTClient();
-            const chatGPTMessage = {
-                role: 'user',
-                content: text,
-            };
-            const instructionMessage = {
-                role: 'assistant',
-                content: 'Make changes only when necessary. Respond with only code, no natural language.'
-            };
-            // added style text to the chatGPTMessage2
-            const chatGPTMessage2 = {
-                role: 'user',
-                content: `Given contents of a code and the style guide file, return the revised code following style guide: ${styleText}. Only code response`
-            };
-            const chatGPTRequest = {
-                model: 'gpt-4-32k',
-                messages: [instructionMessage, chatGPTMessage, chatGPTMessage2],
-            };
-            await chatGPTClient
-                .respond([chatGPTMessage])
-                .then(response => {
-                console.log("response", response);
-                if (!response.text) {
+            // Start progress
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: "Processing your request",
+                cancellable: false
+            }, async (progress, token) => {
+                progress.report({ increment: 0 });
+                const chatGPTClient = new ChatGPTClient();
+                const chatGPTMessage = {
+                    role: 'user',
+                    content: text,
+                };
+                const instructionMessage = {
+                    role: 'assistant',
+                    content: 'Make changes only when necessary. Respond with only code, no natural language.'
+                };
+                const chatGPTMessage2 = {
+                    role: 'user',
+                    content: `Given contents of a code and the style guide file, return the revised code following style guide: ${styleText}. Only code response`
+                };
+                const chatGPTRequest = {
+                    model: 'gpt-4-32k',
+                    messages: [instructionMessage, chatGPTMessage, chatGPTMessage2],
+                };
+                progress.report({ increment: 50 });
+                await chatGPTClient
+                    .respond([chatGPTMessage])
+                    .then(response => {
+                    console.log("response", response);
+                    if (!response.text) {
+                        newText = 'The bot did not respond. Please try again later.';
+                        return;
+                    }
+                    newText = response.text;
+                })
+                    .catch(error => {
+                    console.log(error);
                     newText = 'The bot did not respond. Please try again later.';
-                    return;
-                }
-                newText = response.text;
-            })
-                .catch(error => {
-                console.log(error);
-                newText = 'The bot did not respond. Please try again later.';
-            });
-            editor.edit(editBuilder => {
-                const range = new vscode.Range(document.positionAt(0), document.positionAt(text.length));
-                editBuilder.replace(range, newText);
+                });
+                editor.edit(editBuilder => {
+                    const range = new vscode.Range(document.positionAt(0), document.positionAt(text.length));
+                    editBuilder.replace(range, newText);
+                });
+                progress.report({ increment: 100 });
             });
         }
     });
-    context.subscriptions.push(disposable);
 }
 exports.activate = activate;
 //# sourceMappingURL=extension.js.map
