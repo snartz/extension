@@ -65,7 +65,7 @@ export function activate(context: vscode.ExtensionContext) {
             // read text from style.txt
             let styleText: string;
             try {
-                styleText = fs.readFileSync(path.resolve(__dirname, 'style.txt'), 'utf8');
+                styleText = fs.readFileSync(path.resolve(__dirname, 'style.spec'), 'utf8');
             } catch (error) {
                 console.error(`Error reading style.txt: ${error}`);
                 return;
