@@ -50,6 +50,7 @@ function activate(context) {
         const editor = vscode.window.activeTextEditor;
         if (editor) {
             const document = editor.document;
+            const originalUri = document.uri;
             const text = document.getText();
             // read text from style.txt
             let styleText;
@@ -85,7 +86,7 @@ function activate(context) {
                     model: 'gpt-4-32k',
                     messages: [instructionMessage, chatGPTMessage, chatGPTMessage2],
                 };
-                progress.report({ increment: 50 });
+                progress.report({ increment: 25 });
                 await chatGPTClient
                     .respond([chatGPTMessage])
                     .then(response => {
@@ -100,10 +101,32 @@ function activate(context) {
                     console.log(error);
                     newText = 'The bot did not respond. Please try again later.';
                 });
-                editor.edit(editBuilder => {
-                    const range = new vscode.Range(document.positionAt(0), document.positionAt(text.length));
-                    editBuilder.replace(range, newText);
-                });
+                progress.report({ increment: 50 });
+                // editor.edit(editBuilder => {
+                //     const range = new vscode.Range(
+                //         document.positionAt(0),
+                //         document.positionAt(text.length)
+                //     );
+                //     editBuilder.replace(range, newText);
+                // });
+                // Create a new text document
+                const newDocument = await vscode.workspace.openTextDocument({ content: newText });
+                // Show the diff view
+                vscode.commands.executeCommand('vscode.diff', document.uri, newDocument.uri, 'Original vs. Modified');
+                progress.report({ increment: 75 });
+                // Show information message with two options
+                const result = await vscode.window.showInformationMessage('Do you want to apply these changes to the original file?', 'Yes', 'No');
+                // If the user selects 'Yes', update the original document
+                // If the user selects 'Yes', update the original document
+                if (result === 'Yes') {
+                    const originalDocument = await vscode.workspace.openTextDocument(originalUri); // Open the original document
+                    const originalEditor = await vscode.window.showTextDocument(originalDocument); // Show the original document
+                    // Apply the changes to the original document
+                    await originalEditor.edit(editBuilder => {
+                        const range = new vscode.Range(originalDocument.positionAt(0), originalDocument.positionAt(text.length));
+                        editBuilder.replace(range, newText);
+                    });
+                }
                 progress.report({ increment: 100 });
             });
         }
